@@ -65,8 +65,19 @@ jobs:
           name: ktlint-reports
           path: app/build/reports/ktlint/
 
+      - name: Check for SonarQube token
+        id: sonar
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          if [ -n "$SONAR_TOKEN" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build and analyze
-        if: ${{ github.secret_source != 'Actions' }}
+        if: ${{ steps.sonar.outputs.available != 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
         run: |
@@ -79,7 +90,7 @@ jobs:
           ./gradlew testDebugUnitTest jacocoTestReport assembleDebug $RELEASE_TASKS -PenableCoverage=true
 
       - name: Build and analyze (Sonar)
-        if: ${{ github.secret_source == 'Actions' }}
+        if: ${{ steps.sonar.outputs.available == 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
